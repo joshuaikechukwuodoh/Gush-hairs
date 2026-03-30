@@ -30,9 +30,9 @@ export const handler = async (event, context) => {
     }
 
     const ai = new GoogleGenAI({ apiKey });
-    // Using gemini-1.5-flash for fast, efficient responses
+    // Using gemini-3-flash-preview for fast, efficient responses
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash",
+      model: "gemini-3-flash-preview",
       contents: [{ parts: [{ text: prompt }] }],
     });
 
