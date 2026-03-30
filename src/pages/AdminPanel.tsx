@@ -38,7 +38,7 @@ interface AdSection {
 import { handleFirestoreError, OperationType } from "../lib/firestore-errors";
 
 export default function AdminPanel({ isAdmin }: { isAdmin: boolean }) {
-  const [activeTab, setActiveTab] = useState<'products' | 'ads' | 'settings'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'ads' | 'settings' | 'ai'>('products');
   const [products, setProducts] = useState<Product[]>([]);
   const [ads, setAds] = useState<Advertisement[]>([]);
   const [sections, setSections] = useState<AdSection[]>([]);
@@ -79,6 +79,7 @@ export default function AdminPanel({ isAdmin }: { isAdmin: boolean }) {
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [prompt, setPrompt] = useState("");
+  const [aiResponse, setAiResponse] = useState("");
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -354,6 +355,45 @@ export default function AdminPanel({ isAdmin }: { isAdmin: boolean }) {
     }
   };
 
+  const generateAIResponse = async () => {
+    if (!prompt.trim()) return;
+    setIsGenerating(true);
+    setAiResponse("Thinking...");
+    try {
+      // If we're using Netlify Identity, we'd get a token here.
+      // But since we are in the React app, we might not have a Netlify token easily.
+      // However, we can still call the function if we don't enforce the Role=admin check on the function itself,
+      // or if we use the Firebase token.
+      // For now, I'll assume the user is logged into Netlify Identity as well since it's on the same domain.
+      
+      let token = "";
+      if (window.netlifyIdentity && window.netlifyIdentity.currentUser()) {
+        token = await window.netlifyIdentity.currentUser().jwt();
+      }
+
+      const res = await fetch('/.netlify/functions/gemini', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
+        body: JSON.stringify({ prompt })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to get AI response");
+      
+      setAiResponse(data.text);
+      toast.success("AI response generated!");
+    } catch (error: any) {
+      console.error(error);
+      setAiResponse("Error: " + error.message);
+      toast.error("AI generation failed");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const generateImage = async (target: 'product' | 'ad') => {
     if (!prompt) {
       toast.error("Please enter a prompt for the AI");
@@ -465,8 +505,57 @@ export default function AdminPanel({ isAdmin }: { isAdmin: boolean }) {
           >
             Settings
           </button>
+          <button
+            onClick={() => setActiveTab('ai')}
+            className={`rounded-lg px-4 py-2 text-sm font-bold transition-all ${activeTab === 'ai' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-900'}`}
+          >
+            AI Dashboard
+          </button>
         </div>
       </div>
+
+      {activeTab === 'ai' && (
+        <div className="space-y-6">
+          <div className="rounded-3xl border border-neutral-200 bg-white p-8">
+            <div className="mb-6">
+              <h2 className="font-blackletter text-2xl">AI Admin Dashboard</h2>
+              <p className="text-sm text-neutral-500">Securely prompt the Gemini AI model for store management or content ideas.</p>
+            </div>
+            
+            <div className="space-y-4">
+              <textarea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="Describe what you want the AI to do..."
+                className="w-full min-h-[150px] rounded-2xl border border-neutral-200 bg-neutral-50 p-4 text-neutral-900 outline-none transition-all focus:border-neutral-900 focus:bg-white"
+              />
+              
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-widest text-neutral-400">
+                  {isGenerating ? "AI is thinking..." : "Ready"}
+                </span>
+                <button
+                  onClick={generateAIResponse}
+                  disabled={isGenerating || !prompt.trim()}
+                  className="flex items-center gap-2 rounded-xl bg-neutral-900 px-8 py-3 text-sm font-bold text-white hover:bg-neutral-800 disabled:opacity-50"
+                >
+                  {isGenerating ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  ) : (
+                    <Sparkles className="h-4 w-4" />
+                  )}
+                  Generate Response
+                </button>
+              </div>
+
+              {/* Display area for AI response */}
+              <div className="mt-8 rounded-2xl bg-neutral-50 p-6 border border-neutral-100 min-h-[100px] whitespace-pre-wrap text-sm leading-relaxed text-neutral-700">
+                {aiResponse || <p className="italic text-neutral-400">AI response will appear here...</p>}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {activeTab === 'settings' && (
         <div className="space-y-6">

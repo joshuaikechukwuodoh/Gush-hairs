@@ -1,2 +1,4 @@
-/admin/* 200! Role=admin
-/* /index.html 200
+/admin    /admin/index.html  200! Role=admin
+/admin/   /admin/index.html  200! Role=admin
+/admin/*  /admin/index.html  200! Role=admin
+/*        /index.html        200

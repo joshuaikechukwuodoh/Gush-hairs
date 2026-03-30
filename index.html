@@ -13,7 +13,13 @@
     <script>
       if (window.netlifyIdentity) {
         window.netlifyIdentity.on("init", user => {
-          if (!user) {
+          if (user) {
+            // User is already logged in, but we only redirect if they are at the root
+            if (window.location.pathname === "/" || window.location.pathname === "/index.html") {
+              // Optional: check for role if possible, but widget doesn't expose roles easily on init
+              // document.location.href = "/admin/";
+            }
+          } else {
             window.netlifyIdentity.on("login", () => {
               document.location.href = "/admin/";
             });

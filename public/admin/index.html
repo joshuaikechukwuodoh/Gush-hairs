@@ -108,11 +108,23 @@
     </style>
 </head>
 <body>
+    <div id="loading-overlay" style="position: fixed; inset: 0; background: white; display: flex; align-items: center; justify-content: center; z-index: 1000;">
+        <div style="text-align: center;">
+            <div style="width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #141414; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1rem;"></div>
+            <p style="font-family: sans-serif; font-size: 0.9rem; color: #666;">Verifying Admin Access...</p>
+        </div>
+    </div>
+
+    <style>
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+
     <div class="container">
         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
             <div>
                 <h1>Admin AI Dashboard</h1>
                 <p class="subtitle">Securely prompt the Gemini AI model</p>
+                <a href="/" style="font-size: 0.75rem; color: var(--muted); text-decoration: none; font-weight: 600;">← Back to Website</a>
             </div>
             <button class="logout-btn" onclick="handleLogout()">Logout</button>
         </div>
@@ -128,18 +140,42 @@
     </div>
 
     <script>
+        const overlay = document.getElementById('loading-overlay');
+        let initHandled = false;
+
         // Wait for identity to initialize
         netlifyIdentity.on('init', user => {
+            initHandled = true;
             if (!user) {
+                console.log("No user found on init, redirecting...");
                 window.location.href = "/";
+            } else {
+                console.log("User found on init:", user.email);
+                overlay.style.display = 'none';
             }
         });
 
-        // Fallback: if identity is already initialized but no user
-        const user = netlifyIdentity.currentUser();
-        if (netlifyIdentity.gotrue && !user) {
-             window.location.href = "/";
-        }
+        // Fallback check after a longer delay in case init already happened or is slow
+        setTimeout(() => {
+            if (initHandled) return;
+            
+            const user = netlifyIdentity.currentUser();
+            if (user) {
+                console.log("User found via fallback:", user.email);
+                overlay.style.display = 'none';
+            } else if (netlifyIdentity.gotrue && !user) {
+                console.log("No user found via fallback, redirecting...");
+                window.location.href = "/";
+            } else {
+                console.log("Identity still initializing...");
+                // If it's been 5 seconds and still nothing, we might be stuck
+                setTimeout(() => {
+                    if (!netlifyIdentity.currentUser()) {
+                        window.location.href = "/";
+                    }
+                }, 3000);
+            }
+        }, 2000);
 
         async function handleLogout() {
             await netlifyIdentity.logout();
