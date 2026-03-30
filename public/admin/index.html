@@ -128,10 +128,17 @@
     </div>
 
     <script>
-        // Redirect if not logged in
+        // Wait for identity to initialize
+        netlifyIdentity.on('init', user => {
+            if (!user) {
+                window.location.href = "/";
+            }
+        });
+
+        // Fallback: if identity is already initialized but no user
         const user = netlifyIdentity.currentUser();
-        if (!user) {
-            window.location.href = "/";
+        if (netlifyIdentity.gotrue && !user) {
+             window.location.href = "/";
         }
 
         async function handleLogout() {
