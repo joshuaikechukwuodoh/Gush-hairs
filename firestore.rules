@@ -1,0 +1,120 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: products
+    // Document ID: {productId}
+    // Fields:
+    //   - name: string (required)
+    //   - price: number (required)
+    //   - imageUrl: string (required)
+    //   - category: string (optional)
+    //   - description: string (optional)
+    //   - createdAt: timestamp (optional)
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - email: string (required)
+    //   - role: string (required, 'admin' or 'user')
+    //   - createdAt: timestamp (optional)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        ((exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+          (request.auth.token.email == "joshuaokibe2@gmail.com"));
+    }
+
+    function isValidProduct(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.price is number && data.price >= 0 &&
+             data.imageUrl is string && data.imageUrl.size() > 0 && data.imageUrl.size() < 2000000 &&
+             (!('category' in data) || (data.category is string && data.category.size() < 100)) &&
+             (!('description' in data) || (data.description is string && data.description.size() < 2000));
+    }
+
+    function isValidUser(data) {
+      return data.email is string && data.email.size() > 0 &&
+             data.role in ['admin', 'user'];
+    }
+
+    function isValidAd(data) {
+      return data.sectionId is string && data.sectionId.size() > 0 &&
+             (!('title' in data) || (data.title is string && data.title.size() < 100)) &&
+             data.imageUrl is string && data.imageUrl.size() > 0 && data.imageUrl.size() < 2000000 &&
+             (!('subtitle' in data) || (data.subtitle is string && data.subtitle.size() < 200)) &&
+             (!('buttonText' in data) || (data.buttonText is string && data.buttonText.size() < 50)) &&
+             (!('link' in data) || (data.link is string && data.link.size() < 500)) &&
+             (!('order' in data) || (data.order is number));
+    }
+
+    function isValidAdSection(data) {
+      return data.type in ['slider', 'banner', 'grid'] &&
+             data.order is number &&
+             (!('title' in data) || (data.title is string && data.title.size() < 100)) &&
+             (!('active' in data) || (data.active is bool));
+    }
+
+    function isValidSetting(data, id) {
+      return (id == 'whatsapp' && data.value is string && data.value.size() < 50) ||
+             (id == 'contact' && 
+              data.email is string && data.email.size() < 100 &&
+              data.phone is string && data.phone.size() < 50 &&
+              data.address is string && data.address.size() < 500) ||
+             ('updatedAt' in data);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /products/{productId} {
+      allow read: if true; // Publicly readable
+      allow create: if isAdmin() && isValidProduct(request.resource.data);
+      allow update: if isAdmin() && isValidProduct(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /ad_sections/{sectionId} {
+      allow read: if true; // Publicly readable
+      allow create: if isAdmin() && isValidAdSection(request.resource.data);
+      allow update: if isAdmin() && isValidAdSection(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /advertisements/{adId} {
+      allow read: if true; // Publicly readable
+      allow create: if isAdmin() && isValidAd(request.resource.data);
+      allow update: if isAdmin() && isValidAd(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == 'user' || isAdmin());
+      allow update: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == resource.data.role || isAdmin());
+    }
+
+    match /settings/{settingId} {
+      allow read: if true; // Publicly readable
+      allow write: if isAdmin() && isValidSetting(request.resource.data, settingId);
+    }
+  }
+}

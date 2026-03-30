@@ -1,0 +1,92 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "A hair product for sale",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Name of the hair product" },
+        "price": { "type": "number", "description": "Price in Naira" },
+        "imageUrl": { "type": "string", "description": "URL of the product image" },
+        "category": { "type": "string", "description": "Category (e.g., wigs, bundles)" },
+        "description": { "type": "string", "description": "Product description" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["name", "price", "imageUrl"]
+    },
+    "User": {
+      "title": "User",
+      "description": "A user of the platform",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email", "description": "User's email" },
+        "role": { "type": "string", "enum": ["admin", "user"], "description": "User's role" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["email", "role"]
+    },
+    "Advertisement": {
+      "title": "Advertisement",
+      "description": "An advertisement item belonging to a section",
+      "type": "object",
+      "properties": {
+        "sectionId": { "type": "string", "description": "ID of the section this ad belongs to" },
+        "title": { "type": "string", "description": "Main heading of the ad" },
+        "subtitle": { "type": "string", "description": "Subheading or description" },
+        "imageUrl": { "type": "string", "description": "URL of the banner image" },
+        "buttonText": { "type": "string", "description": "Text for the CTA button" },
+        "link": { "type": "string", "description": "URL the button links to" },
+        "order": { "type": "number", "description": "Display order within the section" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["imageUrl", "sectionId"]
+    },
+    "AdSection": {
+      "title": "AdSection",
+      "description": "A section on the homepage containing advertisements",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Optional title displayed above the section" },
+        "type": { "type": "string", "enum": ["slider", "banner", "grid"], "description": "Layout type of the section" },
+        "order": { "type": "number", "description": "Display order on the homepage" },
+        "active": { "type": "boolean", "description": "Whether the section is visible" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["type", "order"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "Global application settings (e.g., whatsapp, contact)",
+      "type": "object",
+      "properties": {
+        "value": { "type": "string", "description": "The value of the setting (used for simple settings like whatsapp)" },
+        "email": { "type": "string", "format": "email", "description": "Store email address" },
+        "phone": { "type": "string", "description": "Store phone number for display" },
+        "address": { "type": "string", "description": "Store physical address" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last update timestamp" }
+      }
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Collection of hair products"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Collection of user profiles"
+    },
+    "/ad_sections/{sectionId}": {
+      "schema": "AdSection",
+      "description": "Collection of homepage advertisement sections"
+    },
+    "/advertisements/{adId}": {
+      "schema": "Advertisement",
+      "description": "Collection of all advertisement items"
+    },
+    "/settings/{settingId}": {
+      "schema": "Settings",
+      "description": "Global application settings (e.g., whatsapp_number)"
+    }
+  }
+}
